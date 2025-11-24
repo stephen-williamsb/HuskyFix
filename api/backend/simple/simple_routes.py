@@ -41,8 +41,9 @@ def get_playlist_data():
 
 
 # ------------------------------------------------------------
-@simple_routes.route("/niceMesage", methods=["GET"])
+@simple_routes.route("/niceMessage", methods=["GET"])
 def affirmation():
+    current_app.logger.info("GET /niceMessage")
     message = """
     <H1>Think about it...</H1>
     <br />
