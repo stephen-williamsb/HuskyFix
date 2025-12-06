@@ -31,34 +31,40 @@ def MapDemoNav():
     st.sidebar.page_link("pages/02_Map_Demo.py", label="Map Demonstration", icon="🗺️")
 
 
+def ReportsHomeNav():
+    st.sidebar.page_link("pages/101_Reports_Home.py", label="Reports", icon=":material/article:")
+
+
 ## ------------------------ Examples for Role of usaid_worker ------------------------
 
 def usaidWorkerHomeNav():
     st.sidebar.page_link(
-      "pages/10_USAID_Worker_Home.py", label="USAID Worker Home", icon="🏠"
+        "pages/10_USAID_Worker_Home.py", label="USAID Worker Home", icon="🏠"
     )
+
 
 def NgoDirectoryNav():
     st.sidebar.page_link("pages/14_NGO_Directory.py", label="NGO Directory", icon="📁")
 
+
 def AddNgoNav():
     st.sidebar.page_link("pages/15_Add_NGO.py", label="Add New NGO", icon="➕")
 
+
 def ApiTestNav():
     st.sidebar.page_link("pages/12_API_Test.py", label="Test the API", icon="🛜")
+
 
 def PredictionNav():
     st.sidebar.page_link(
         "pages/11_Prediction.py", label="Regression Prediction", icon="📈"
     )
 
+
 def ClassificationNav():
     st.sidebar.page_link(
         "pages/13_Classification.py", label="Classification Demo", icon="🌺"
     )
-
-
-
 
 
 #### ------------------------ System Admin Role ------------------------
@@ -95,6 +101,7 @@ def SideBarLinks(show_home=False):
             PolStratAdvHomeNav()
             WorldBankVizNav()
             MapDemoNav()
+            ReportsHomeNav()
 
         # If the user role is usaid worker, show the Api Testing page
         if st.session_state["role"] == "usaid_worker":
@@ -104,7 +111,6 @@ def SideBarLinks(show_home=False):
             PredictionNav()
             ApiTestNav()
             ClassificationNav()
-            
 
         # If the user is an administrator, give them access to the administrator pages
         if st.session_state["role"] == "administrator":
