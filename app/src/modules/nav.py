@@ -74,37 +74,78 @@ def AdminPageNav():
         "pages/21_ML_Model_Mgmt.py", label="ML Model Management", icon="🏢"
     )
 
+#### ------------------------ Employee (Maintenance Worker) Role ------------------------
+
+def EmployeeHomeNav():
+    st.sidebar.page_link(
+        "pages/40_Employee_Home.py", label="Maintenance Worker Home", icon="🔧"
+    )
+
+# Page 1 — View assigned prioritized requests (Stories 2.1, 2.2)
+def EmployeeRequestsNav():
+    st.sidebar.page_link(
+        "pages/31_Maintenance_MyJobs.py",
+        label="My Work Orders",
+        icon="📋"
+    )
+
+# Page 2 — Update job status + ETA + notifications (Stories 2.3, 2.5)
+def EmployeeStatusUpdateNav():
+    st.sidebar.page_link(
+        "pages/32_Maintenance_JobDetail.py",
+        label="Update Job Status",
+        icon="🚚"
+    )
+
+# Page 3 — Parts requests + completion logging (Stories 2.4, 2.6)
+def EmployeePartsAndCompletionNav():
+    st.sidebar.page_link(
+        "pages/33_Maintenance_Parts.py",
+        label="Parts & Completion",
+        icon="🧰"
+    )
+
 
 # --------------------------------Links Function -----------------------------------------------
 def SideBarLinks(show_home=False):
     """
-    This function handles adding links to the sidebar of the app based upon the logged-in user's role, which was put in the streamlit session_state object when logging in.
+    Controls links displayed on the sidebar based on session user role.
+    Safe implementation that prevents sidebar disappearing bugs.
     """
 
-    # add a logo to the sidebar always
+    # Always show logo
     st.sidebar.image("assets/logo.png", width=150)
 
-    # If there is no logged in user, redirect to the Home (Landing) page
+    # Ensure required session keys exist
     if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-        st.switch_page("Home.py")
+        st.session_state["authenticated"] = False
 
+    if "role" not in st.session_state:
+        st.session_state["role"] = None
+
+    # Redirect ONLY if unauthenticated and not on home page
+    if not st.session_state["authenticated"] and not show_home:
+        st.switch_page("Home.py")
+        return
+
+    # Optionally show Home link
     if show_home:
-        # Show the Home page link (the landing page)
         HomeNav()
 
-    # Show the other page navigators depending on the users' role.
+    # Render links for authenticated users
     if st.session_state["authenticated"]:
 
-        # Show World Bank Link and Map Demo Link if the user is a political strategy advisor role.
-        if st.session_state["role"] == "pol_strat_advisor":
+        role = st.session_state.get("role")
+
+        # ---------------- POL STRAT ADVISOR ----------------
+        if role == "pol_strat_advisor":
             PolStratAdvHomeNav()
             WorldBankVizNav()
             MapDemoNav()
             ReportsHomeNav()
 
-        # If the user role is usaid worker, show the Api Testing page
-        if st.session_state["role"] == "usaid_worker":
+        # ---------------- USAID WORKER ----------------
+        elif role == "usaid_worker":
             usaidWorkerHomeNav()
             NgoDirectoryNav()
             AddNgoNav()
@@ -112,16 +153,22 @@ def SideBarLinks(show_home=False):
             ApiTestNav()
             ClassificationNav()
 
-        # If the user is an administrator, give them access to the administrator pages
-        if st.session_state["role"] == "administrator":
+        # ---------------- ADMIN ----------------
+        elif role == "administrator":
             AdminPageNav()
 
-    # Always show the About page at the bottom of the list of links
+        # ---------------- EMPLOYEE ----------------
+        elif role == "employee":
+            EmployeeHomeNav()
+            EmployeeRequestsNav()
+            EmployeeStatusUpdateNav()
+            EmployeePartsAndCompletionNav()
+
+    # Always show About
     AboutPageNav()
 
+    # Logout button for any authenticated user
     if st.session_state["authenticated"]:
-        # Always show a logout button if there is a logged in user
         if st.sidebar.button("Logout"):
-            del st.session_state["role"]
-            del st.session_state["authenticated"]
+            st.session_state.clear()
             st.switch_page("Home.py")

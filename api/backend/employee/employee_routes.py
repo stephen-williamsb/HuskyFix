@@ -203,3 +203,67 @@ def revenue_report():
         (start, end)
     )
     return make_response(jsonify(cursor.fetchone()), 200)
+
+# -------------------------
+# Employee analytics endpoints
+# -------------------------
+
+# GET /employee/analytics/avg-requests
+# Return average requests per month per category in a date range (requires start and end query params YYYY-MM-DD)
+@employee_bp.get('/analytics/avg-requests')
+def analytics_avg_requests():
+    start = request.args.get('start')
+    end = request.args.get('end')
+
+    if not start or not end:
+        return make_response({'error': 'start and end parameters required (YYYY-MM-DD)'}, 400)
+
+    # compute months in range (inclusive)
+    # note: TIMESTAMPDIFF(MONTH,start,end) returns difference in months
+    cursor = db.get_db().cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT
+            m.issueType AS category,
+            COUNT(*) AS totalRequests,
+            (COUNT(*) / NULLIF((TIMESTAMPDIFF(MONTH, %s, %s) + 1), 0)) AS avgPerMonth
+        FROM maintenanceRequest m
+        WHERE m.dateRequested BETWEEN %s AND %s
+        GROUP BY m.issueType
+        ORDER BY totalRequests DESC
+        """,
+        (start, end, start, end)
+    )
+    rows = cursor.fetchall()
+    return make_response(jsonify(rows), 200)
+
+
+# GET /employee/analytics/building-comparison
+# Return request counts & stats grouped by building in a date range (start + end required)
+@employee_bp.get('/analytics/building-comparison')
+def analytics_building_comparison():
+    start = request.args.get('start')
+    end = request.args.get('end')
+
+    if not start or not end:
+        return make_response({'error': 'start and end parameters required (YYYY-MM-DD)'}, 400)
+
+    cursor = db.get_db().cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT
+            b.buildingID,
+            b.address,
+            COUNT(*) AS totalRequests,
+            SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) AS completedCount,
+            AVG(NULLIF(TIMESTAMPDIFF(DAY, m.dateRequested, m.dateCompleted),0)) AS avgDaysToComplete
+        FROM maintenanceRequest m
+        JOIN building b ON m.buildingID = b.buildingID
+        WHERE m.dateRequested BETWEEN %s AND %s
+        GROUP BY b.buildingID, b.address
+        ORDER BY totalRequests DESC
+        """,
+        (start, end)
+    )
+    rows = cursor.fetchall()
+    return make_response(jsonify(rows), 200)
