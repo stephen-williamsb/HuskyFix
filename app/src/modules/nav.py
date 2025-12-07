@@ -138,7 +138,7 @@ def SideBarLinks(show_home=False):
         role = st.session_state.get("role")
 
         # ---------------- POL STRAT ADVISOR ----------------
-        if role == "pol_strat_advisor":
+        if role == "data_analyst":
             PolStratAdvHomeNav()
             WorldBankVizNav()
             MapDemoNav()
