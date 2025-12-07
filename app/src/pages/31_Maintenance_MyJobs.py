@@ -1,4 +1,3 @@
-# app/src/pages/31_Maintenance_MyJobs.py
 import streamlit as st
 import requests
 from modules.nav import SideBarLinks
@@ -47,12 +46,24 @@ if employees:
     employee_id = emp_ids[selected_idx]
 else:
     # fallback small list including 7
-    employee_id = st.selectbox("Select employee (filter assigned jobs)", options=[7, 1, 2, 3], index=0 if default_emp == 7 else 0)
+    # default to 7 if available
+    fallback_options = [7, 1, 2, 3]
+    try:
+        fallback_index = fallback_options.index(int(default_emp))
+    except Exception:
+        fallback_index = 0
+    employee_id = st.selectbox("Select employee (filter assigned jobs)", options=fallback_options, index=fallback_index)
 
 # Filters
 col1, col2, col3, col4 = st.columns([2,2,2,1])
 with col1:
-    date_filter = st.date_input("Date", value=date.today())
+    # NEW: allow "All dates" checkbox (default True) so the backend is queried for all days for this employee
+    all_dates = st.checkbox("All dates", value=True, help="When checked, fetch jobs for all dates for the selected employee.")
+    # show date_input only when user unchecks "All dates"
+    if not all_dates:
+        date_filter = st.date_input("Date", value=date.today())
+    else:
+        date_filter = None
 with col2:
     priority_filter = st.selectbox("Priority", ["All", "High", "Medium", "Low"])
 with col3:
@@ -69,11 +80,14 @@ def api_get(path, params=None):
         st.error(f"API GET failed: {e}")
         return []
 
-# Build params to ask the backend to filter by assigned employee + date + status when possible
+# Build params to ask the backend to filter by assigned employee
 params = {"limit": 500, "employee_id": employee_id}
-# date range: request route expects start_date and end_date in YYYY-MM-DD
-params["start_date"] = date_filter.isoformat()
-params["end_date"] = (date_filter + timedelta(days=1)).isoformat()
+
+# Only include date range params if the user requested a specific date (i.e., all_dates is False)
+if not all_dates and date_filter is not None:
+    # date range: request route expects start_date and end_date in YYYY-MM-DD
+    params["start_date"] = date_filter.isoformat()
+    params["end_date"] = (date_filter + timedelta(days=1)).isoformat()
 
 # Add server-side status filter if user selected one
 if status_filter != "All":
@@ -128,8 +142,6 @@ jobs_sorted = sorted(
     key=lambda j: (
         status_rank(j.get("activeStatus")),
         priority_rank(j.get("priority")),
-        # want newest first -> sort reverse by date string; we'll sort ascending on negated timestamp alternative
-        # Simpler: invert the date string by prefixing with negative; instead, sort ascending by status & priority, then sort by dateRequested descending
     ),
 )
 
@@ -139,7 +151,10 @@ jobs_sorted = sorted(jobs_sorted, key=lambda j: date_key(j.get("dateRequested"))
 st.write(f"Showing {len(jobs_sorted)} jobs assigned to employee {employee_id}")
 
 if not jobs_sorted:
-    st.info("No jobs found for this employee and date/filter. You can try a wider date range or 'All' status.")
+    if all_dates:
+        st.info("No jobs found for this employee (for all dates).")
+    else:
+        st.info("No jobs found for this employee and selected date/filter. You can try 'All dates' or a wider date range.")
 
 # Table with actions
 for job in jobs_sorted:
