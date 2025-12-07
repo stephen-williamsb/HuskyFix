@@ -105,6 +105,24 @@ def EmployeePartsAndCompletionNav():
         icon="🧰"
     )
 
+# Page 4 -- Landlord Role ------------------------
+def LandlordNav():
+    st.sidebar.page_link(
+        "pages/201_Building_List.py",
+        label="Building Overview",
+        icon="🏢"
+    )
+    st.sidebar.page_link(
+        "pages/202_Request_Management.py",
+        label="Request Management",
+        icon="🛠️"
+    )
+    st.sidebar.page_link(
+        "pages/203_Monthly_Cost.py",
+        label="Monthly Maintenance Cost",
+        icon="💲"
+    )
+
 
 # --------------------------------Links Function -----------------------------------------------
 def SideBarLinks(show_home=False):
@@ -160,6 +178,10 @@ def SideBarLinks(show_home=False):
             EmployeeRequestsNav()
             EmployeeStatusUpdateNav()
             EmployeePartsAndCompletionNav()
+
+        # ---------------- LANDLORD ----------------
+        elif role == "landlord":
+            LandlordNav()
 
     # Always show About
     AboutPageNav()

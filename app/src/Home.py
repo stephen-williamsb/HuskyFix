@@ -82,3 +82,11 @@ if st.button('Act as Stephen, Maintenance Worker',
     st.session_state['role'] = 'employee'
     st.session_state['first_name'] = 'Stephen'
     st.switch_page('pages/40_Employee_Home.py')
+
+if st.button('Act as Landlord',
+             type = 'primary',
+             use_container_width=True):
+    st.session_state['authenticated'] = True
+    st.session_state['role'] = 'landlord'
+    st.session_state['first_name'] = 'Landlord'
+    st.switch_page('pages/201_Building_List.py')
