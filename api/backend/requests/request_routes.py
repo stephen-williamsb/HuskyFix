@@ -310,7 +310,9 @@ def update_request(request_id):
         'priority': 'priority',
         'status': 'activeStatus',        # external 'status' -> DB 'activeStatus'
         'dateCompleted': 'dateCompleted',
-        'scheduledDate': 'scheduledDate'
+        'scheduledDate': 'scheduledDate',
+        'issuePhotos': 'issuePhotos',
+        'completionNotes': 'completionNotes'
     }
 
     fields = []
