@@ -15,6 +15,7 @@ def AboutPageNav():
 
 
 #### ------------------------ Examples for Role of pol_strat_advisor ------------------------
+
 def PolStratAdvHomeNav():
     st.sidebar.page_link(
         "pages/00_Pol_Strat_Home.py", label="Political Strategist Home", icon="👤"
