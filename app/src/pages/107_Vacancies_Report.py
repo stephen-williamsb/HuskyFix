@@ -1,4 +1,7 @@
 import logging
+
+import requests
+
 logger = logging.getLogger(__name__)
 import streamlit as st
 from streamlit_extras.app_logo import add_logo
@@ -8,17 +11,19 @@ from urllib.error import URLError
 from modules.nav import SideBarLinks
 
 SideBarLinks()
-
-st.title("Cost Report")
-
+API_URL = "http://web-api:4000/report/vacancies"
+st.title("Vacancy Report")
+result = None
 with st.sidebar:
     st.subheader("Params")
     by_building = st.checkbox("By building")
+    if st.button("run"):
+        params = {"by_build": by_building}
+        result = requests.get(API_URL, params)
 
 st.subheader("Results")
-try:
-    mock_data = {"Dates" : [5,4], "Data": [1,4]}
-    df = pd.DataFrame(mock_data)
+if result:
+    df = pd.DataFrame(result.json())
     st.dataframe(df)
-except:
+else:
     st.caption("Run the report to generate data.")
