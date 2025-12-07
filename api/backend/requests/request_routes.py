@@ -142,7 +142,7 @@ def create_request():
     aptNumber = data.get('aptNumber')
     priority = data.get('priority', 0)
     studentID = data.get('studentID')
-    dateRequested = data.get('dateRequested') or datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    dateRequested = data.get('dateRequested') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # basic validation
     if not issueType or not description or not buildingID:
