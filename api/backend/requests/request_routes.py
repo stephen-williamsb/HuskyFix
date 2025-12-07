@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
 from backend.db_connection import db
 from datetime import datetime
+import pymysql
 
 requests_bp = Blueprint('requests', __name__, url_prefix='/requests')
 
@@ -136,28 +137,59 @@ def create_request():
     data = request.json or {}
 
     issueType = data.get('issueType')
-    description = data.get('description')  # external -> mapped to issueDescription
+    description = data.get('description')
     buildingID = data.get('buildingID')
     aptNumber = data.get('aptNumber')
     priority = data.get('priority', 0)
-    studentID = data.get('studentID')  # external -> mapped to studentRequestingID
+    studentID = data.get('studentID')
     dateRequested = data.get('dateRequested') or datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
+    # basic validation
     if not issueType or not description or not buildingID:
         return make_response({'error': 'issueType, description and buildingID are required'}, 400)
 
-    cursor = db.get_db().cursor()
-    cursor.execute(
-        """
+    try:
+        aptNumber = int(aptNumber)
+    except Exception:
+        return make_response({'error': 'aptNumber must be an integer'}, 400)
+
+    conn = db.get_db()
+    cursor = conn.cursor()
+
+    #tried to add auto increment but it broke db so we are doing this now.
+    cursor.execute("SELECT COALESCE(MAX(requestID), 0) + 1 FROM maintenanceRequest")
+    row = cursor.fetchone()
+    new_id = list(row.values())[0]
+
+
+    insert_sql = """
         INSERT INTO maintenanceRequest
-            (issueType, issueDescription, buildingID, aptNumber, priority, studentRequestingID, dateRequested, activeStatus)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """,
-        (issueType, description, buildingID, aptNumber, priority, studentID, dateRequested, 'open')
+            (requestID, issueType, issueDescription, buildingID, aptNumber,
+             priority, studentRequestingID, dateRequested, activeStatus)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    params = (
+        new_id,
+        issueType,
+        description,
+        buildingID,
+        aptNumber,
+        priority,
+        studentID,
+        dateRequested,
+        'open'
     )
-    db.get_db().commit()
-    new_id = cursor.lastrowid
-    return make_response({'requestID': new_id}, 201)
+
+    try:
+        cursor.execute(insert_sql, params)
+        conn.commit()
+        return make_response({'requestID': new_id}, 201)
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.exception("Failed to create maintenance request")
+        return make_response({'error': str(e)}, 500)
 
 
 # -------------------------
