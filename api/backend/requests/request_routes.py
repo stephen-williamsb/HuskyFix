@@ -1,14 +1,45 @@
 # api/backend/requests/requests_routes.py
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify, make_response, current_app
 from backend.db_connection import db
 from datetime import datetime
 
 requests_bp = Blueprint('requests', __name__, url_prefix='/requests')
 
-# Helper: convert cursor rows to list of dicts (works for cursor.fetchall())
 def rows_to_dicts(cursor, rows):
+    if not rows:
+        return []
+
+    # if rows are already dict-like (sqlite3.Row or true dicts)
+    first = rows[0]
+    if isinstance(first, dict):
+        return list(rows)
+
+    # some drivers return sqlite3.Row which acts like both tuple & dict
+    try:
+        return [dict(row) for row in rows]
+    except Exception:
+        pass
+
+    # fallback to tuple + description conversion
     col_names = [col[0] for col in cursor.description]
     return [dict(zip(col_names, row)) for row in rows]
+
+
+def row_to_dict(cursor, row):
+    if row is None:
+        return None
+
+    if isinstance(row, dict):
+        return row
+
+    try:
+        return dict(row)
+    except Exception:
+        pass
+
+    col_names = [col[0] for col in cursor.description]
+    return dict(zip(col_names, row))
+
 
 # -------------------------
 # GET /requests
@@ -23,17 +54,22 @@ def list_requests():
 
     student_id = request.args.get('student_id')
     if student_id:
-        where_clauses.append("r.studentID = %s")
+        # schema uses studentRequestingID
+        where_clauses.append("r.studentRequestingID = %s")
         params.append(student_id)
 
     employee_id = request.args.get('employee_id')
     if employee_id:
-        where_clauses.append("r.assignedEmployeeID = %s")
+        # employeeAssigned is a join table: filter by existence
+        where_clauses.append(
+            "EXISTS (SELECT 1 FROM employeeAssigned ea WHERE ea.requestID = r.requestID AND ea.employeeID = %s)"
+        )
         params.append(employee_id)
 
     status = request.args.get('status')
     if status:
-        where_clauses.append("r.status = %s")
+        # schema uses activeStatus
+        where_clauses.append("r.activeStatus = %s")
         params.append(status)
 
     priority = request.args.get('priority')
@@ -56,15 +92,28 @@ def list_requests():
 
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
-    limit = int(request.args.get('limit', 100))
-    offset = int(request.args.get('offset', 0))
+    try:
+        limit = int(request.args.get('limit', 100))
+    except ValueError:
+        limit = 100
+    try:
+        offset = int(request.args.get('offset', 0))
+    except ValueError:
+        offset = 0
 
     cursor = db.get_db().cursor()
     query = f"""
         SELECT
-            r.requestID, r.issueType, r.description, r.status, r.priority,
-            r.dateRequested, r.dateCompleted, r.buildingID, r.aptNumber,
-            r.studentID, r.assignedEmployeeID
+            r.requestID,
+            r.issueType,
+            r.issueDescription,
+            r.activeStatus,
+            r.priority,
+            r.dateRequested,
+            r.dateCompleted,
+            r.buildingID,
+            r.aptNumber,
+            r.studentRequestingID
         FROM maintenanceRequest r
         {where_sql}
         ORDER BY r.dateRequested DESC
@@ -73,24 +122,25 @@ def list_requests():
     params.extend([limit, offset])
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
-    return make_response(jsonify(rows), 200)
+    results = rows_to_dicts(cursor, rows)
+    return make_response(jsonify(results), 200)
 
 
 # -------------------------
 # POST /requests
 # Create a new maintenance request (expects JSON body)
-# Required fields: issueType, description, buildingID (or other location info)
+# Accepts external fields 'description' and 'studentID' and maps to DB columns
 # -------------------------
 @requests_bp.post('')
 def create_request():
     data = request.json or {}
 
     issueType = data.get('issueType')
-    description = data.get('description')
+    description = data.get('description')  # external -> mapped to issueDescription
     buildingID = data.get('buildingID')
     aptNumber = data.get('aptNumber')
-    priority = data.get('priority', 'normal')
-    studentID = data.get('studentID')  # optional
+    priority = data.get('priority', 0)
+    studentID = data.get('studentID')  # external -> mapped to studentRequestingID
     dateRequested = data.get('dateRequested') or datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
     if not issueType or not description or not buildingID:
@@ -100,7 +150,7 @@ def create_request():
     cursor.execute(
         """
         INSERT INTO maintenanceRequest
-            (issueType, description, buildingID, aptNumber, priority, studentID, dateRequested, status)
+            (issueType, issueDescription, buildingID, aptNumber, priority, studentRequestingID, dateRequested, activeStatus)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (issueType, description, buildingID, aptNumber, priority, studentID, dateRequested, 'open')
@@ -117,9 +167,9 @@ def create_request():
 @requests_bp.get('/<int:request_id>')
 def get_request_detail(request_id):
     conn = db.get_db()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
-    # primary request row
+    # primary request row (use actual column names)
     cursor.execute(
         """
         SELECT r.*, b.address AS buildingAddress
@@ -129,56 +179,79 @@ def get_request_detail(request_id):
         """,
         (request_id,)
     )
-    request_row = cursor.fetchone()
-    if not request_row:
+    request_row_raw = cursor.fetchone()
+    if not request_row_raw:
         return make_response({'error': 'Request not found'}, 404)
+    request_row = row_to_dict(cursor, request_row_raw)
 
-    # photos
-    cursor.execute(
-        "SELECT photoID, filePath, uploadedAt FROM requestPhotos WHERE requestID = %s ORDER BY uploadedAt DESC",
-        (request_id,)
-    )
-    photos = rows_to_dicts(cursor, cursor.fetchall())
+    # photos: check if a requestPhotos table exists; if not fallback to issuePhotos text field
+    photos = []
+    try:
+        cursor.execute(
+            "SELECT photoID, filePath, uploadedAt FROM requestPhotos WHERE requestID = %s ORDER BY uploadedAt DESC",
+            (request_id,)
+        )
+        photos = rows_to_dicts(cursor, cursor.fetchall())
+    except Exception:
+        if 'issuePhotos' in (request_row or {}) and request_row.get('issuePhotos'):
+            photos = [{'embedded': request_row.get('issuePhotos')}]
 
-    # notes / comments
-    cursor.execute(
-        "SELECT noteID, authorID, text, createdAt FROM requestNotes WHERE requestID = %s ORDER BY createdAt DESC",
-        (request_id,)
-    )
-    notes = rows_to_dicts(cursor, cursor.fetchall())
+    # notes / comments (try table, else use completionNotes)
+    notes = []
+    try:
+        cursor.execute(
+            "SELECT noteID, authorID, text, createdAt FROM requestNotes WHERE requestID = %s ORDER BY createdAt DESC",
+            (request_id,)
+        )
+        notes = rows_to_dicts(cursor, cursor.fetchall())
+    except Exception:
+        if 'completionNotes' in (request_row or {}) and request_row.get('completionNotes'):
+            notes = [{'note': request_row.get('completionNotes')}]
 
-    # history / status timeline
-    cursor.execute(
-        "SELECT historyID, oldStatus, newStatus, changedBy, changedAt, note FROM requestHistory WHERE requestID = %s ORDER BY changedAt DESC",
-        (request_id,)
-    )
-    history = rows_to_dicts(cursor, cursor.fetchall())
+    # history / status timeline (try table; otherwise empty list)
+    history = []
+    try:
+        cursor.execute(
+            "SELECT historyID, oldStatus, newStatus, changedBy, changedAt, note FROM requestHistory WHERE requestID = %s ORDER BY changedAt DESC",
+            (request_id,)
+        )
+        history = rows_to_dicts(cursor, cursor.fetchall())
+    except Exception:
+        history = []
 
-    # assigned employees (could be one or many depending on schema)
-    cursor.execute(
-        """
-        SELECT e.employeeID, e.firstName, e.lastName, e.role
-        FROM employee e
-        JOIN requestAssignment ra ON e.employeeID = ra.employeeID
-        WHERE ra.requestID = %s
-        """,
-        (request_id,)
-    )
-    assigned = rows_to_dicts(cursor, cursor.fetchall())
+    # assigned employees (pull from employeeAssigned join table)
+    try:
+        cursor.execute(
+            """
+            SELECT e.employeeID, e.firstName, e.lastName, e.employeeType
+            FROM employee e
+            JOIN employeeAssigned ea ON e.employeeID = ea.employeeID
+            WHERE ea.requestID = %s
+            """,
+            (request_id,)
+        )
+        assigned = rows_to_dicts(cursor, cursor.fetchall())
+    except Exception:
+        assigned = []
 
     # parts used / planned
-    cursor.execute(
-        """
-        SELECT p.partID, p.name, pu.quantity, p.cost
-        FROM partUsed pu
-        JOIN part p ON pu.partID = p.partID
-        WHERE pu.requestID = %s
-        """,
-        (request_id,)
-    )
-    parts = rows_to_dicts(cursor, cursor.fetchall())
+    parts = []
+    try:
+        cursor.execute(
+            """
+            SELECT p.partID, p.name, pu.quantity, p.cost
+            FROM partUsed pu
+            JOIN part p ON pu.partID = p.partID
+            WHERE pu.requestID = %s
+            """,
+            (request_id,)
+        )
+        parts = rows_to_dicts(cursor, cursor.fetchall())
+    except Exception:
+        parts = []
 
-    detail = dict(request_row)
+    # combine into response
+    detail = dict(request_row) if request_row else {}
     detail['photos'] = photos
     detail['notes'] = notes
     detail['history'] = history
@@ -190,30 +263,53 @@ def get_request_detail(request_id):
 
 # -------------------------
 # PUT /requests/<id>
-# Update request fields (description, location, priority, apartment, etc.)
+# Update request fields (maps external keys to DB column names; supports assigning employee)
 # -------------------------
 @requests_bp.put('/<int:request_id>')
 def update_request(request_id):
     data = request.json or {}
 
-    allowed = ['issueType', 'description', 'buildingID', 'aptNumber', 'priority', 'status', 'assignedEmployeeID', 'dateCompleted']
+    # mapping of accepted external keys to DB column names
+    mapping = {
+        'issueType': 'issueType',
+        'description': 'issueDescription',
+        'buildingID': 'buildingID',
+        'aptNumber': 'aptNumber',
+        'priority': 'priority',
+        'status': 'activeStatus',        # external 'status' -> DB 'activeStatus'
+        'dateCompleted': 'dateCompleted',
+        'scheduledDate': 'scheduledDate'
+    }
+
     fields = []
     values = []
+    for ext_key, db_col in mapping.items():
+        if ext_key in data:
+            fields.append(f"{db_col} = %s")
+            values.append(data[ext_key])
 
-    for key in allowed:
-        if key in data:
-            fields.append(f"{key} = %s")
-            values.append(data[key])
-
-    if not fields:
+    if not fields and 'assignedEmployeeID' not in data:
         return make_response({'error': 'No updatable fields supplied'}, 400)
 
-    values.append(request_id)
     cursor = db.get_db().cursor()
-    cursor.execute(
-        f"UPDATE maintenanceRequest SET {', '.join(fields)} WHERE requestID = %s",
-        tuple(values)
-    )
+    if fields:
+        values.append(request_id)
+        cursor.execute(
+            f"UPDATE maintenanceRequest SET {', '.join(fields)} WHERE requestID = %s",
+            tuple(values)
+        )
+
+    # handle assignedEmployeeID separately using employeeAssigned join table
+    if 'assignedEmployeeID' in data:
+        emp_id = data.get('assignedEmployeeID')
+        try:
+            # optionally remove duplicates then insert
+            cursor.execute("DELETE FROM employeeAssigned WHERE requestID = %s AND employeeID = %s", (request_id, emp_id))
+            cursor.execute("INSERT INTO employeeAssigned (employeeID, requestID) VALUES (%s, %s)", (emp_id, request_id))
+        except Exception:
+            # If schema differs, ignore but log
+            current_app.logger.exception("Could not update employeeAssigned for request %s", request_id)
+
     db.get_db().commit()
     return make_response({'message': 'Request updated'}, 200)
 
@@ -226,19 +322,21 @@ def update_request(request_id):
 def cancel_request(request_id):
     data = request.json or {}
     reason = data.get('reason', 'Canceled via API')
+    user_id = data.get('user_id')
 
     cursor = db.get_db().cursor()
-    # using status 'canceled' and recording to history table if present
-    cursor.execute("UPDATE maintenanceRequest SET status = %s WHERE requestID = %s", ('canceled', request_id))
-    # insert into history table if exists
+    # set activeStatus to 'canceled' (matches schema)
+    cursor.execute("UPDATE maintenanceRequest SET activeStatus = %s WHERE requestID = %s", ('canceled', request_id))
+
+    # try to add a row to requestHistory if table exists
     try:
         cursor.execute(
             "INSERT INTO requestHistory (requestID, oldStatus, newStatus, changedBy, changedAt, note) VALUES (%s, %s, %s, %s, NOW(), %s)",
-            (request_id, 'any', 'canceled', data.get('user_id'), reason)
+            (request_id, 'any', 'canceled', user_id, reason)
         )
     except Exception:
         # non-fatal if history table doesn't exist or columns differ
-        pass
+        current_app.logger.debug("requestHistory insert failed (table may be missing or schema differs)")
 
     db.get_db().commit()
     return make_response({'message': 'Request canceled'}, 200)
