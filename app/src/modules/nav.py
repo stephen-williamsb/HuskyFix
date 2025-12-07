@@ -139,9 +139,6 @@ def SideBarLinks(show_home=False):
 
         # ---------------- POL STRAT ADVISOR ----------------
         if role == "data_analyst":
-            PolStratAdvHomeNav()
-            WorldBankVizNav()
-            MapDemoNav()
             ReportsHomeNav()
 
         # ---------------- USAID WORKER ----------------
