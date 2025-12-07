@@ -7,7 +7,7 @@ SideBarLinks()
 
 st.title("Monthly Maintenance Cost")
 
-API_BASE = "web-api:4000"
+API_BASE = "http://web-api:4000"
 
 st.subheader("Select Month")
 """select month"""

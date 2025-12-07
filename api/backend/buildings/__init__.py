@@ -1,3 +1,3 @@
-from .buildings_routes import buildings_bp
+from .buildings_routes import building_bp
 
-__all__ = ['buildings_bp']
+__all__ = ['building_bp']

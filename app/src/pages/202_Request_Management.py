@@ -6,7 +6,7 @@ from modules.nav import SideBarLinks
 SideBarLinks()
 st.title("Request Management (Landlord)")
 
-API_BASE = "web-api:4000"
+API_BASE = "http://web-api:4000"
 
 
 def load_requests():
