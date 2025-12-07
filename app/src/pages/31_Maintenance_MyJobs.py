@@ -167,9 +167,10 @@ for job in jobs_sorted:
             # show assigned employees if backend included them in detail (it doesn't in list endpoint by default)
         with c2:
             if st.button("Open Job Detail", key=f"open_{job.get('requestID')}"):
+                # store selected id and go to detail page
                 st.session_state["selected_request_id"] = job.get("requestID")
-                st.experimental_set_query_params(page="job_detail", request_id=job.get("requestID"))
-                st.experimental_rerun()
+                st.query_params = {"page": "job_detail", "request_id": job.get("requestID")}
+                st.rerun()
         with c3:
             if st.button("Mark En Route", key=f"enroute_{job.get('requestID')}"):
                 try:

@@ -1,4 +1,3 @@
-# api/backend/requests/requests_routes.py
 from flask import Blueprint, request, jsonify, make_response, current_app
 from backend.db_connection import db
 from datetime import datetime
