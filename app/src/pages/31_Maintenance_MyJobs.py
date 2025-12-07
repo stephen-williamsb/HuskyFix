@@ -17,12 +17,43 @@ API_BASE = "http://web-api:4000"
 # default logged-in employee id for testing (use small number like 7)
 employee_id = st.session_state.get("employee_id", 7)
 
+def priority_rank(p):
+    if not p:
+        return 2
+    p_low = str(p).lower()
+
+    if p_low in ("high", "5", "4"):
+        return 0
+    if p_low in ("medium", "3"):
+        return 1
+
+    return 2   # low or unknown
+
+def status_rank(status):
+    s = (status or "").lower()
+
+    if s in ("in progress", "in-progress"):
+        return 0
+    if s in ("en route", "enroute"):
+        return 1
+    if s == "blocked":
+        return 2
+    if s == "open":
+        return 3
+    if s in ("completed", "closed", "complete"):
+        return 4
+
+    # Unknown statuses go near bottom
+    return 5
+
+
+
 # Filters
 col1, col2, col3, col4 = st.columns([2,2,2,1])
 with col1:
     date_filter = st.date_input("Date", value=date.today())
 with col2:
-    priority_filter = st.selectbox("Priority", ["All", "High", "Medium", "Low"])
+    priority_filter = st.selectbox("Priority", ["All", "5", "4", "3", "2", "1"])
 with col3:
     status_filter = st.selectbox("Status", ["All", "open", "En Route", "In Progress", "Blocked", "Completed"])
 with col4:
@@ -37,11 +68,8 @@ def api_get(path, params=None):
         st.error(f"API GET failed: {e}")
         return []
 
-# Build params: use employee_id and date. Your /requests route supports filtering by employee via join existence.
-params = {"employee_id": employee_id, "limit": 200}
-# if your backend supports start/end date format use these:
-params["start_date"] = date_filter.isoformat()
-params["end_date"] = (date_filter + timedelta(days=1)).isoformat()
+# Build params: NO employee filtering since jobs are not assigned yet
+params = {"limit": 200}
 
 jobs = api_get("/requests", params=params)
 
@@ -61,7 +89,15 @@ if status_filter != "All":
     jobs = [j for j in jobs if (j.get("activeStatus") or "").lower() == status_filter.lower()]
 
 # Sort by priority rank then dateRequested desc
-jobs_sorted = sorted(jobs, key=lambda j: (priority_rank(j.get("priority")), j.get("dateRequested") or ""), reverse=False)
+jobs_sorted = sorted(
+    jobs,
+    key=lambda j: (
+        status_rank(j.get("activeStatus")),      # 1. Status order
+        priority_rank(j.get("priority")),        # 2. Priority within status
+        j.get("dateRequested") or ""              # 3. Newest first
+    ),
+)
+
 
 st.write(f"Showing {len(jobs_sorted)} jobs assigned to employee {employee_id}")
 
@@ -77,8 +113,8 @@ for job in jobs_sorted:
             if st.button("Open Job Detail", key=f"open_{job.get('requestID')}"):
                 # store selected id and go to detail page
                 st.session_state["selected_request_id"] = job.get("requestID")
-                st.experimental_set_query_params(page="job_detail", request_id=job.get("requestID"))
-                st.experimental_rerun()
+                st.query_params = {"page": "job_detail", "request_id": job.get("requestID")}
+                st.rerun()
         with c3:
             if st.button("Mark En Route", key=f"enroute_{job.get('requestID')}"):
                 try:
