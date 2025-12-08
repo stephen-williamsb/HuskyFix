@@ -10,6 +10,13 @@ def rows_to_dicts(cursor, rows):
 
 # /employee/parts
 
+@employee_bp.get('')
+def get_employees():
+    cursor = db.get_db().cursor()
+    query = "SELECT * FROM employee"
+    cursor.execute(query)
+    return jsonify(cursor.fetchall()), 200
+
 # GET: list parts inventory (quantities, cost)
 @employee_bp.get('/parts')
 def get_parts_inventory():

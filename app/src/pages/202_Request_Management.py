@@ -26,7 +26,7 @@ def load_requests():
 def load_employees():
     """Load employees list for assignment"""
     try:
-        res = requests.get(f"{API_BASE}/employees")
+        res = requests.get(f"{API_BASE}/employee")
         if res.status_code == 200:
             return res.json()
         else:
