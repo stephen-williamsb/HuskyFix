@@ -17,6 +17,18 @@ def get_employees():
     cursor.execute(query)
     return jsonify(cursor.fetchall()), 200
 
+@employee_bp.route('/assign', methods = ['POST'])
+def assign_employee():
+    json = request.get_json()
+    params = []
+    params.extend([json["employeeID"], json["requestID"]])
+    cursor = db.get_db().cursor()
+    query = "INSERT INTO employeeAssigned (employeeID, requestID) VALUES (%s, %s)"
+    cursor.execute(query, params)
+    return {}, 201
+
+
+
 # GET: list parts inventory (quantities, cost)
 @employee_bp.get('/parts')
 def get_parts_inventory():
