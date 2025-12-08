@@ -49,9 +49,11 @@ def assign_employee(request_id, employee_id):
     return res.status_code == 200
 
 
-def archive_request(request_id):
-    """archive a request"""
-    res = requests.delete(f"{API_BASE}/requests/{request_id}")
+def cancel_request(request_id):
+    res = requests.delete(
+        f"{API_BASE}/requests/{request_id}",
+        json={}
+    )
     return res.status_code == 200
 
 #UI
@@ -104,14 +106,14 @@ if selected_id:
 
     st.markdown("Mark as Verified Completed")
     if st.button("Mark Completed"):
-        if update_request(selected_id, {"activeStatus": "Completed"}):
+        if update_request(selected_id, {"status": "completed"}):
             st.success("Request marked completed!")
         else:
             st.error("Failed to update status.")
 
-    st.markdown("Archive Request")
-    if st.button("Archive Request"):
-        if archive_request(selected_id):
-            st.success("Request archived!")
+    st.markdown("Cancel Request")
+    if st.button("Cancel Request"):
+        if cancel_request(selected_id):
+            st.success("Request Cancelled!")
         else:
-            st.error("Failed to archive request.")
+            st.error("Failed to cancel request.")

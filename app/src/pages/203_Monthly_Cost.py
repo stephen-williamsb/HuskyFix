@@ -1,49 +1,52 @@
-import streamlit as st
 import requests
+import streamlit as st
 import pandas as pd
 from modules.nav import SideBarLinks
 
 SideBarLinks()
+API_URL = "http://web-api:4000/report/cost"
 
-st.title("Monthly Maintenance Cost")
+st.title("Monthly Cost Report")
 
-API_BASE = "http://web-api:4000"
+# 主页面上的月份选择
+col1, col2 = st.columns([1, 3])
+with col1:
+    year_month = st.text_input(
+        "Year-Month", 
+        value="2024-01",
+        placeholder="YYYY-MM"
+    )
+    
+with col2:
+    by_building = st.checkbox("By building")
 
-st.subheader("Select Month")
-"""select month"""
-
-month = st.text_input("Enter a month (YYYY-MM)", placeholder="2025-11")
-
-if st.button("Generate Report"):
-    if not month or len(month) != 7:
-        st.error("Not valid month")
-        st.stop()
-
-    try:
-        # Call backend API
-        url = f"{API_BASE}/Employee/reports/monthly-cost?month={month}"
-        response = requests.get(url)
-
-        if response.status_code != 200:
-            st.error(f"API Error: {response.text}")
-            st.stop()
-
-        data = response.json()
-
-        if not data:
-            st.warning("No cost data found for this month.")
+# 运行按钮
+if st.button("Run Report", type="primary"):
+    if year_month:
+        # 构建日期范围
+        from_date = f"{year_month}-01"
+        until_date = f"{year_month}-31"
+        
+        params = {
+            "from": from_date,
+            "to": until_date,
+            "by_build": by_building
+        }
+        
+        with st.spinner("Fetching data..."):
+            result = requests.get(API_URL, params)
+        
+        # 显示结果
+        st.subheader(f"Results for {year_month}")
+        if result.status_code == 200:
+            df = pd.DataFrame(result.json())
+            if not df.empty:
+                st.dataframe(df)
+            else:
+                st.info("No data found for the selected month")
         else:
-            st.success(f"Showing maintenance costs for {month}")
-
-            # Convert to DataFrame
-            df = pd.DataFrame(data)
-            df = df.rename(columns={
-                "buildingID": "Building ID",
-                "address": "Building Address",
-                "totalcost": "Total Cost ($)"
-            })
-
-            st.dataframe(df, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Failed {e}")
+            st.error(f"Failed to fetch data: {result.status_code}")
+    else:
+        st.error("Please enter a month (YYYY-MM)")
+else:
+    st.caption("Enter month above and click 'Run Report'")
