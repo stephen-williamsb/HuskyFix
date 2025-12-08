@@ -6,7 +6,7 @@ from flask import current_app
 # Create a Blueprint for NGO routes
 report = Blueprint("report", __name__)
 
-
+# get all active requests (i.e. not completed)
 @report.route("/active_requests", methods=["GET"])
 def get_active_requests():
     cursor = db.get_db().cursor()
@@ -15,6 +15,9 @@ def get_active_requests():
     return jsonify(cursor.fetchall()), 200
 
 
+# Returns the average reports per month by issue type over a specified time frame
+# optional params from, to, type, desc
+# from: from date, to: to date: type: only show avg request for this type. desc: sort descending bool
 @report.route("/AVG_Monthly_Requests", methods=["GET"])
 def get_monthly_requests():
     cursor = db.get_db().cursor()
@@ -38,6 +41,9 @@ def get_monthly_requests():
     return jsonify(cursor.fetchall()), 200
 
 
+# show number of requests by building
+# params from, to, building, active, desc
+# from date, to date, building: only show this building (address), active: only show active (bool), desc: sort descending (bool)
 @report.route("/building_requests", methods=["GET"])
 def get_building_requests():
     cursor = db.get_db().cursor()
@@ -64,6 +70,9 @@ def get_building_requests():
     return jsonify(cursor.fetchall()), 200
 
 
+# get the revenue
+# params interval, by_build, include_empty
+# interval: revenue per "month" or "year", by_build: group by building (bool), include_empty: include empty apartments (bool)
 @report.route("/revenue", methods=["GET"])
 def get_revenue():
     cursor = db.get_db().cursor()
@@ -71,11 +80,11 @@ def get_revenue():
     query = ""
     params = []
     if by_build:
-        query += "SELECT b.address, SUM(%s * a.rentalCost) AS totalRevenue"
+        query += "SELECT b.address, SUM(%s * a.rentalCost) AS `Total Revenue`"
     else:
-        query += "SELECT SUM(%s * a.rentalCost) AS totalRevenue"
+        query += "SELECT SUM(%s * a.rentalCost) AS `Total Revenue`"
     interval = request.args.get("interval")
-    if interval == "Year":
+    if interval.lower() == "year":
         params.append(12)
     else:
         params.append(1)
@@ -84,11 +93,12 @@ def get_revenue():
     if not include_empty:
         query += " WHERE a.renterID IS NOT NULL"
     if by_build:
-        query += " GROUP BY b.buildingID, b.address ORDER BY totalRevenue DESC"
+        query += " GROUP BY b.buildingID, b.address ORDER BY `Total Revenue` DESC"
     cursor.execute(query, params)
     return jsonify(cursor.fetchall()), 200
 
-
+# costs incurred in maintenance over specified period.
+# params by_build, from, to
 @report.route("/cost", methods=["GET"])
 def get_cost():
     cursor = db.get_db().cursor()
@@ -96,9 +106,9 @@ def get_cost():
     query = ""
     params = []
     if by_build:
-        query += "SELECT b.address, SUM(p.cost) AS totalCost"
+        query += "SELECT b.address, SUM(p.cost) AS `Total Cost`"
     else:
-        query += "SELECT SUM(p.cost) AS totalCost"
+        query += "SELECT SUM(p.cost) AS `Total Cost`"
 
     query += (" FROM maintenanceRequest m JOIN partUsed pu ON m.requestID = pu.requestID "
               "JOIN part p ON pu.partID = p.partID JOIN building b ON b.buildingID = m.buildingID "
@@ -107,12 +117,14 @@ def get_cost():
     until_date = request.args.get("to")
     params.extend([from_date, until_date])
     if by_build:
-        query += " GROUP BY b.buildingID, b.address ORDER BY totalCost DESC"
+        query += " GROUP BY b.buildingID, b.address ORDER BY `Total Cost` DESC"
 
     cursor.execute(query, params)
     return jsonify(cursor.fetchall()), 200
 
 
+# vacancies across buildings
+# params by_build
 @report.route("/vacancies", methods=["GET"])
 def get_vacancies():
     cursor = db.get_db().cursor()
