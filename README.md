@@ -92,6 +92,7 @@ blueprint `/buildings`
 * PUT `/parts/<int:part_id>`
 * GET `/parts/<int:part_id>`
 * PUT `/parts/<int:part_id>/status`
+* DELETE `/parts/<int:part_id>`
 * GET `/reports/monthly-cost`
 * GET `/reports/revenue`
 * GET `/analytics/avg-requests`

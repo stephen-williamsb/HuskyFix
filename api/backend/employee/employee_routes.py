@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
 from backend.db_connection import db
+import pymysql
 
 employee_bp = Blueprint('employee', __name__, url_prefix='/employee')
 
@@ -204,6 +205,52 @@ def adjust_part_status(part_id):
     db.get_db().commit()
 
     return make_response({'message': 'Part quantity adjusted'}, 200)
+
+# DELETE: remove a part from inventory (if possible)
+@employee_bp.delete('/parts/<int:part_id>')
+def delete_part(part_id):
+    conn = db.get_db()
+    cursor = conn.cursor()
+
+    # 1) Check if the part exists
+    cursor.execute(
+        """
+        SELECT partID
+        FROM part
+        WHERE partID = %s
+        """,
+        (part_id,)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return make_response({'error': 'Part not found'}, 404)
+
+    # 2) Try to delete the part
+    try:
+        cursor.execute(
+            """
+            DELETE FROM part
+            WHERE partID = %s
+            """,
+            (part_id,)
+        )
+        conn.commit()
+        return make_response({'message': 'Part deleted'}, 200)
+
+    except pymysql.err.IntegrityError:
+        # Likely foreign key constraint from partUsed or another table
+        conn.rollback()
+        return make_response(
+            {
+                'error': 'Cannot delete part because it is referenced in maintenance history.'
+            },
+            400
+        )
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.exception("Failed to delete part %s", part_id)
+        return make_response({'error': str(e)}, 500)
 
 # /employee/reports/monthly-cost
 
