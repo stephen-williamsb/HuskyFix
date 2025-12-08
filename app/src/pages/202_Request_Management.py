@@ -44,10 +44,9 @@ def update_request(request_id, payload):
 
 
 def assign_employee(request_id, employee_id):
-    """assign employee to a request"""
-    payload = {"employeeID": employee_id, "requestID": request_id}
-    res = requests.post(f"{API_BASE}/employee/assign", json=payload)
-    return res.status_code == 201 or res.status_code == 200
+    payload = {"assignedEmployeeID": employee_id}
+    res = requests.put(f"{API_BASE}/requests/{request_id}", json=payload)
+    return res.status_code == 200
 
 
 def archive_request(request_id):
