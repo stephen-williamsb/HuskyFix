@@ -42,7 +42,13 @@ if employees:
         default_idx = emp_ids.index(int(default_emp))
     except Exception:
         default_idx = 0
-    selected_idx = st.selectbox("Select employee (filter assigned jobs)", emp_display, index=default_idx)
+    selected_display = st.selectbox(
+        "Select employee (filter assigned jobs)",
+        emp_display,
+        index=default_idx,
+    )
+
+    selected_idx = emp_display.index(selected_display)
     employee_id = emp_ids[selected_idx]
 else:
     # fallback small list including 7
