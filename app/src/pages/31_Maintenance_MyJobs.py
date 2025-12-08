@@ -71,7 +71,7 @@ with col1:
     else:
         date_filter = None
 with col2:
-    priority_filter = st.selectbox("Priority", ["All", "High", "Medium", "Low"])
+    priority_filter = st.selectbox("Priority", ["All", "5", "4", "3", "2", "1", "0"])
 with col3:
     status_filter = st.selectbox("Status", ["All", "In Progress", "En Route", "Blocked", "Open", "Completed"])
 with col4:

@@ -57,18 +57,47 @@ def add_part():
     if not name or cost is None:
         return make_response({'error': 'name and cost are required'}, 400)
 
-    cursor = db.get_db().cursor()
-    cursor.execute(
-        """
-        INSERT INTO part (name, cost, quantity)
-        VALUES (%s, %s, %s)
-        """,
-        (name, cost, quantity)
-    )
-    db.get_db().commit()
+    conn = db.get_db()
+    cursor = conn.cursor()
 
-    new_id = cursor.lastrowid
-    return make_response({'partID': new_id}, 201)
+    try:
+        # If client supplied a partID, try to use it (but avoid duplicates).
+        provided_id = data.get('partID')
+        if provided_id is not None:
+            try:
+                provided_id = int(provided_id)
+            except Exception:
+                provided_id = None
+
+        if provided_id:
+            cursor.execute("SELECT 1 FROM part WHERE partID = %s", (provided_id,))
+            if cursor.fetchone():
+                # supplied id already exists -> fall back to generating a new id
+                provided_id = None
+
+        if not provided_id:
+            # Generate next partID (table doesn't have AUTO_INCREMENT)
+            cursor.execute("SELECT COALESCE(MAX(partID), 0) + 1 FROM part")
+            row = cursor.fetchone()
+            next_id = int(row[0]) if row and row[0] is not None else 1
+        else:
+            next_id = provided_id
+
+        cursor.execute(
+            """
+            INSERT INTO part (partID, name, cost, quantity)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (next_id, name, cost, quantity)
+        )
+        conn.commit()
+
+        return make_response({'partID': next_id}, 201)
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.exception("Failed to create part")
+        return make_response({'error': str(e)}, 500)
 
 # PUT: update part quantity / price / metadata
 @employee_bp.put('/parts/<int:part_id>')
