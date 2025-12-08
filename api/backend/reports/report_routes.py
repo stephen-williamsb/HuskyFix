@@ -4,10 +4,10 @@ from mysql.connector import Error
 from flask import current_app
 
 # Create a Blueprint for NGO routes
-report = Blueprint("report", __name__)
+report_bp = Blueprint("report", __name__)
 
 # get all active requests (i.e. not completed)
-@report.route("/active_requests", methods=["GET"])
+@report_bp.route("/active_requests", methods=["GET"])
 def get_active_requests():
     cursor = db.get_db().cursor()
     query = "SELECT * FROM maintenanceRequest WHERE activeStatus != 'completed'"
@@ -18,7 +18,7 @@ def get_active_requests():
 # Returns the average reports per month by issue type over a specified time frame
 # optional params from, to, type, desc
 # from: from date, to: to date: type: only show avg request for this type. desc: sort descending bool
-@report.route("/AVG_Monthly_Requests", methods=["GET"])
+@report_bp.route("/AVG_Monthly_Requests", methods=["GET"])
 def get_monthly_requests():
     cursor = db.get_db().cursor()
     params = []
@@ -44,7 +44,7 @@ def get_monthly_requests():
 # show number of requests by building
 # params from, to, building, active, desc
 # from date, to date, building: only show this building (address), active: only show active (bool), desc: sort descending (bool)
-@report.route("/building_requests", methods=["GET"])
+@report_bp.route("/building_requests", methods=["GET"])
 def get_building_requests():
     cursor = db.get_db().cursor()
     params = []
@@ -73,7 +73,7 @@ def get_building_requests():
 # get the revenue
 # params interval, by_build, include_empty
 # interval: revenue per "month" or "year", by_build: group by building (bool), include_empty: include empty apartments (bool)
-@report.route("/revenue", methods=["GET"])
+@report_bp.route("/revenue", methods=["GET"])
 def get_revenue():
     cursor = db.get_db().cursor()
     by_build = request.args.get("by_build").lower() == "true"
@@ -99,7 +99,7 @@ def get_revenue():
 
 # costs incurred in maintenance over specified period.
 # params by_build, from, to
-@report.route("/cost", methods=["GET"])
+@report_bp.route("/cost", methods=["GET"])
 def get_cost():
     cursor = db.get_db().cursor()
     by_build = request.args.get("by_build").lower() == "true"
@@ -125,7 +125,7 @@ def get_cost():
 
 # vacancies across buildings
 # params by_build
-@report.route("/vacancies", methods=["GET"])
+@report_bp.route("/vacancies", methods=["GET"])
 def get_vacancies():
     cursor = db.get_db().cursor()
     by_build = request.args.get("by_build").lower() == "true"
