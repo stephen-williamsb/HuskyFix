@@ -17,6 +17,8 @@ def get_employees():
     cursor.execute(query)
     return jsonify(cursor.fetchall()), 200
 
+
+# I think this can be deleted
 @employee_bp.route('/assign', methods = ['POST'])
 def assign_employee():
     json = request.get_json()

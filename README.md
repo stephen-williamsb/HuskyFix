@@ -75,11 +75,46 @@ Our web API has 4 main blueprints
 
 ### Buildings
 
+blueprint `/buildings`
+* GET `/`
+* POST `/`
+* PUT `/<int:building_id>`
+* GET `/<int:building_id>/apartments`
+* PUT `/<int:building_id>/apartments/<int:apt_number>`
+* GET `/<int:building_id>/apartments/<int:apt_number>/vacancy`
+* GET `/<int:building_id>/apartments/<int:apt_number>/vacancy`
+
 ### employee
+
+* GET `''`
+* GET `/parts`
+* POST `/parts`
+* PUT `/parts/<int:part_id>`
+* GET `/parts/<int:part_id>`
+* PUT `/parts/<int:part_id>/status`
+* GET `/reports/monthly-cost`
+* GET `/reports/revenue`
+* GET `/analytics/avg-requests`
+* GET `/analytics/building-comparison`
+* 
 
 ### report
 
+blueprint `/report`
+* GET `/active_requests`
+* GET `/AVG_Monthly_Requests`
+* GET `/building_request`
+* GET `/revenue`
+* GET `/cost`
+* GET `/vacancies`
+
 ### request
+
+* GET `''`
+* POST `''`
+* GET `/<int:request_id>`
+* PUT `/<int:request_id>`
+* DELETE `/<int:request_id>`
 
 ## StreamlitUI
 
