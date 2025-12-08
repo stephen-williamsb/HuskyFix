@@ -84,7 +84,7 @@ def get_revenue():
     else:
         query += "SELECT SUM(%s * a.rentalCost) AS `Total Revenue`"
     interval = request.args.get("interval")
-    if interval.lower() == "year":
+    if interval and interval.lower() == "year":
         params.append(12)
     else:
         params.append(1)

@@ -14,7 +14,7 @@ st.title("Revenue Report")
 result = None
 with st.sidebar:
     st.subheader("Params")
-    interval = st.multiselect("By", ["Month", "Year"])
+    interval = st.selectbox("By", ["Month", "Year"])
     by_building = st.checkbox("By building")
     include_empty_apartments = st.checkbox("Include empty apartments")
     if st.button("run"):
