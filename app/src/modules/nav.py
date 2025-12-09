@@ -14,66 +14,13 @@ def AboutPageNav():
     st.sidebar.page_link("pages/30_About.py", label="About", icon="🧠")
 
 
-#### ------------------------ Examples for Role of pol_strat_advisor ------------------------
-
-def PolStratAdvHomeNav():
-    st.sidebar.page_link(
-        "pages/00_Pol_Strat_Home.py", label="Political Strategist Home", icon="👤"
-    )
-
-
-def WorldBankVizNav():
-    st.sidebar.page_link(
-        "pages/01_World_Bank_Viz.py", label="World Bank Visualization", icon="🏦"
-    )
-
-
-def MapDemoNav():
-    st.sidebar.page_link("pages/02_Map_Demo.py", label="Map Demonstration", icon="🗺️")
+#### ------------------------ Examples for Role of data_analyst ------------------------
 
 
 def ReportsHomeNav():
     st.sidebar.page_link("pages/101_Reports_Home.py", label="Reports", icon=":material/article:")
 
 
-## ------------------------ Examples for Role of usaid_worker ------------------------
-
-def usaidWorkerHomeNav():
-    st.sidebar.page_link(
-        "pages/10_USAID_Worker_Home.py", label="USAID Worker Home", icon="🏠"
-    )
-
-
-def NgoDirectoryNav():
-    st.sidebar.page_link("pages/14_NGO_Directory.py", label="NGO Directory", icon="📁")
-
-
-def AddNgoNav():
-    st.sidebar.page_link("pages/15_Add_NGO.py", label="Add New NGO", icon="➕")
-
-
-def ApiTestNav():
-    st.sidebar.page_link("pages/12_API_Test.py", label="Test the API", icon="🛜")
-
-
-def PredictionNav():
-    st.sidebar.page_link(
-        "pages/11_Prediction.py", label="Regression Prediction", icon="📈"
-    )
-
-
-def ClassificationNav():
-    st.sidebar.page_link(
-        "pages/13_Classification.py", label="Classification Demo", icon="🌺"
-    )
-
-
-#### ------------------------ System Admin Role ------------------------
-def AdminPageNav():
-    st.sidebar.page_link("pages/20_Admin_Home.py", label="System Admin", icon="🖥️")
-    st.sidebar.page_link(
-        "pages/21_ML_Model_Mgmt.py", label="ML Model Management", icon="🏢"
-    )
 
 #### ------------------------ Employee (Maintenance Worker) Role ------------------------
 
@@ -156,22 +103,10 @@ def SideBarLinks(show_home=False):
 
         role = st.session_state.get("role")
 
-        # ---------------- POL STRAT ADVISOR ----------------
+        # ---------------- DATA ANALYST ----------------
         if role == "data_analyst":
             ReportsHomeNav()
 
-        # ---------------- USAID WORKER ----------------
-        elif role == "usaid_worker":
-            usaidWorkerHomeNav()
-            NgoDirectoryNav()
-            AddNgoNav()
-            PredictionNav()
-            ApiTestNav()
-            ClassificationNav()
-
-        # ---------------- ADMIN ----------------
-        elif role == "administrator":
-            AdminPageNav()
 
         # ---------------- EMPLOYEE ----------------
         elif role == "employee":
