@@ -8,7 +8,6 @@ from backend.employee import employee_bp
 from backend.requests import requests_bp
 from backend.db_connection import db
 from backend.simple.simple_routes import simple_routes
-from backend.ngos.ngo_routes import ngos
 from backend.reports.report_routes import report_bp
 from backend.buildings import building_bp
 
@@ -54,7 +53,6 @@ def create_app():
     app.register_blueprint(simple_routes)
     app.register_blueprint(employee_bp)
     app.register_blueprint(requests_bp)
-    app.register_blueprint(ngos, url_prefix="/ngo")
     app.register_blueprint(report_bp, url_prefix="/report")
     app.register_blueprint(building_bp)
 

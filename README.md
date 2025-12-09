@@ -82,10 +82,11 @@ blueprint `/buildings`
 * GET `/<int:building_id>/apartments`
 * PUT `/<int:building_id>/apartments/<int:apt_number>`
 * GET `/<int:building_id>/apartments/<int:apt_number>/vacancy`
-* GET `/<int:building_id>/apartments/<int:apt_number>/vacancy`
+* PUT `/<int:building_id>/apartments/<int:apt_number>/vacancy`
 
 ### employee
 
+blueprint `/employee`
 * GET `''`
 * GET `/parts`
 * POST `/parts`
@@ -94,10 +95,6 @@ blueprint `/buildings`
 * PUT `/parts/<int:part_id>/status`
 * DELETE `/parts/<int:part_id>`
 * GET `/reports/monthly-cost`
-* GET `/reports/revenue`
-* GET `/analytics/avg-requests`
-* GET `/analytics/building-comparison`
-* 
 
 ### report
 
@@ -111,6 +108,7 @@ blueprint `/report`
 
 ### request
 
+blueprint `/requests`
 * GET `''`
 * POST `''`
 * GET `/<int:request_id>`
